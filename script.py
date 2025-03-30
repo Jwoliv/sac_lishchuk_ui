@@ -278,8 +278,7 @@ class FileRuleClient(QWidget):
             "fileName": self.file_name_input.text(),
             "userConfig": {"email": self.username_input.text(), "password": self.password_input.text()}
         }
-        response = self.send_request(data, "execute")
-        response_json = response.json()
+        response_json = self.send_request(data, "execute")
         if "content" in response_json:
             self.response_area.setText(response_json["content"])
         else:
