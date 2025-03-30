@@ -1,5 +1,7 @@
 import sys
 import requests
+from PyQt6.QtCore import QByteArray
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLineEdit, QLabel, QMessageBox, \
     QComboBox, QGroupBox, QFormLayout, QHBoxLayout
 
@@ -81,8 +83,13 @@ class FileRuleClient(QWidget):
         self.change_permission_button.setEnabled(False)
         permission_management_layout.addWidget(self.change_permission_button)
 
+        self.role_permission_select = QComboBox(self)
+        self.role_permission_select.addItems(["ADMIN", "MODERATOR", "USER"])
+        self.role_permission_select.setVisible(False)
+        permission_management_layout.addWidget(self.role_permission_select)
+
         self.permission_select = QComboBox(self)
-        self.permission_select.addItems(["READ", "WRITE", "EXECUTE"])
+        self.permission_select.addItems(["R", "W", "E"])
         self.permission_select.setVisible(False)
         permission_management_layout.addWidget(self.permission_select)
 
@@ -176,10 +183,10 @@ class FileRuleClient(QWidget):
 
     def send_request(self, data, endpoint = "", api_url = API_URL):
         try:
-            if (endpoint != None):
-                response = requests.post(f"{api_url}/{endpoint}", json=data)
+            if endpoint is not None:
+                response = requests.post(f"{api_url}/{endpoint}", json=data, timeout=10)
             else:
-                response = requests.post(f"{api_url}", json=data)
+                response = requests.post(f"{api_url}", json=data, timeout=10)
             if response.status_code == 200:
                 return response.json()
             else:
@@ -209,9 +216,45 @@ class FileRuleClient(QWidget):
                 "password": self.password_input.text()
             }
         }
-        response = self.send_request(data, "read")
-        if response:
-            self.response_area.setText(response.get("content", "No content"))
+
+        # Send the request, checking the endpoint based on the file extension
+        if data["fileName"].lower().endswith(".jpg") or data["fileName"].lower().endswith(".png"):
+            response = requests.post(f"{API_URL}/image/read", json=data, timeout=10)
+        else:
+            response = requests.post(f"{API_URL}/read", json=data, timeout=10)
+
+        if response.status_code == 200:
+            content_type = response.headers.get("Content-Type", "")
+
+            # Handle JSON responses
+            if "application/json" in content_type:
+                try:
+                    response_json = response.json()
+                    if "content" in response_json:
+                        self.response_area.setText(response_json["content"])
+                    else:
+                        self.response_area.setText(response_json["clientText"])
+                except ValueError:
+                    self.response_area.setText("Invalid JSON response")
+
+            # Handle Image Responses
+            elif "image" in content_type:
+                image_data = QByteArray(response.content)
+                pixmap = QPixmap()
+                if pixmap.loadFromData(image_data):
+                    self.image_label = QLabel(self)  # Ensure the QLabel exists
+                    self.image_label.setPixmap(pixmap)
+                    self.image_label.setScaledContents(True)
+                    self.image_label.setMinimumWidth(500)
+                    self.image_label.setMinimumHeight(500)
+                    self.image_label.show()
+                else:
+                    self.response_area.setText("Failed to load image data.")
+
+            else:
+                self.response_area.setText("Unknown response type")
+        else:
+            self.response_area.setText(f"Error {response.status_code}: {response.text}")
 
     def prepare_write(self):
         self.content_area.setVisible(True)
@@ -225,8 +268,10 @@ class FileRuleClient(QWidget):
             "action": "OVERWRITE"
         }
         response = self.send_request(data, "write")
-        if response:
-            self.response_area.setText(str(response))
+        if "content" in response:
+            self.response_area.setText(response["content"])
+        else:
+            self.response_area.setText(response["clientText"])
 
     def execute_file(self):
         data = {
@@ -234,10 +279,14 @@ class FileRuleClient(QWidget):
             "userConfig": {"email": self.username_input.text(), "password": self.password_input.text()}
         }
         response = self.send_request(data, "execute")
-        if response:
-            self.response_area.setText(str(response))
+        response_json = response.json()
+        if "content" in response_json:
+            self.response_area.setText(response_json["content"])
+        else:
+            self.response_area.setText(response_json["clientText"])
 
     def prepare_change_permission(self):
+        self.role_permission_select.setVisible(True)
         self.permission_select.setVisible(True)
         self.action_select.setVisible(True)
         self.change_permission_button.setEnabled(True)
@@ -245,9 +294,9 @@ class FileRuleClient(QWidget):
     def change_permission(self):
         data = {
             "fileName": self.file_name_input.text(),
-            "permissions": {"USER": [self.permission_select.currentText()]},
+            "permissions": {self.role_permission_select.currentText(): [self.permission_select.currentText()]},
             "action": self.action_select.currentText(),
-            "userConfig": {"userId": self.username_input.text(), "password": self.password_input.text()}
+            "userConfig": {"email": self.username_input.text(), "password": self.password_input.text()}
         }
         response = self.send_request(data, "change-permission")
         if response:
@@ -316,6 +365,7 @@ class FileRuleClient(QWidget):
         self.write_button.setEnabled(False)
         self.change_permission_button.setEnabled(False)
         self.add_user_button.setEnabled(False)
+        self.image_label.setVisible(False)
 
 
 if __name__ == "__main__":
