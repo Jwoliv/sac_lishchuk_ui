@@ -17,7 +17,6 @@ class FileRuleClient(QWidget):
     def initUI(self):
         layout = QVBoxLayout()
 
-        # User Credentials Section
         user_credentials_group = QGroupBox("User Credentials", self)
         user_credentials_layout = QFormLayout()
         self.username_input = QLineEdit(self)
@@ -29,7 +28,6 @@ class FileRuleClient(QWidget):
         user_credentials_group.setLayout(user_credentials_layout)
         layout.addWidget(user_credentials_group)
 
-        # File Operations Section
         file_operations_group = QGroupBox("File Operations", self)
         file_operations_layout = QVBoxLayout()
 
@@ -70,7 +68,6 @@ class FileRuleClient(QWidget):
         file_operations_group.setLayout(file_operations_layout)
         layout.addWidget(file_operations_group)
 
-        # Permission Management Section
         permission_management_group = QGroupBox("Permission Management", self)
         permission_management_layout = QVBoxLayout()
 
@@ -101,7 +98,6 @@ class FileRuleClient(QWidget):
         permission_management_group.setLayout(permission_management_layout)
         layout.addWidget(permission_management_group)
 
-        # User Management Section
         user_management_group = QGroupBox("User Management", self)
         user_management_layout = QVBoxLayout()
 
@@ -114,7 +110,6 @@ class FileRuleClient(QWidget):
         self.add_user_button.setEnabled(False)
         user_management_layout.addWidget(self.add_user_button)
 
-        # New User Fields
         self.first_name_input = QLineEdit(self)
         self.first_name_input.setPlaceholderText("Enter First Name")
         self.first_name_input.setVisible(False)
@@ -140,7 +135,6 @@ class FileRuleClient(QWidget):
         self.new_user_password_input.setVisible(False)
         user_management_layout.addWidget(self.new_user_password_input)
 
-        # Role and Mandatory Level Select Fields
         self.role_select = QComboBox(self)
         self.role_select.addItems(["USER","MODERATOR","ADMIN"])
         self.role_select.setVisible(False)
@@ -159,8 +153,6 @@ class FileRuleClient(QWidget):
         ])
         self.mandatory_level_select.setVisible(False)
         user_management_layout.addWidget(self.mandatory_level_select)
-
-        # Admin Config Fields (new fields for adminConfig)
         self.admin_email_input = QLineEdit(self)
         self.admin_email_input.setPlaceholderText("Enter Admin Email")
         self.admin_email_input.setVisible(True)
@@ -217,7 +209,6 @@ class FileRuleClient(QWidget):
             }
         }
 
-        # Send the request, checking the endpoint based on the file extension
         if data["fileName"].lower().endswith(".jpg") or data["fileName"].lower().endswith(".png"):
             response = requests.post(f"{API_URL}/image/read", json=data, timeout=10)
         else:
@@ -226,7 +217,6 @@ class FileRuleClient(QWidget):
         if response.status_code == 200:
             content_type = response.headers.get("Content-Type", "")
 
-            # Handle JSON responses
             if "application/json" in content_type:
                 try:
                     response_json = response.json()
@@ -237,12 +227,11 @@ class FileRuleClient(QWidget):
                 except ValueError:
                     self.response_area.setText("Invalid JSON response")
 
-            # Handle Image Responses
             elif "image" in content_type:
                 image_data = QByteArray(response.content)
                 pixmap = QPixmap()
                 if pixmap.loadFromData(image_data):
-                    self.image_label = QLabel(self)  # Ensure the QLabel exists
+                    self.image_label = QLabel(self)
                     self.image_label.setPixmap(pixmap)
                     self.image_label.setScaledContents(True)
                     self.image_label.setMinimumWidth(500)
@@ -332,7 +321,6 @@ class FileRuleClient(QWidget):
             self.response_area.setText(str(response))
 
 
-    # Define the function to clear all inputs
     def clear_all_forms(self):
         # self.username_input.clear()
         # self.password_input.clear()
@@ -346,7 +334,6 @@ class FileRuleClient(QWidget):
         self.new_user_password_input.clear()
         self.admin_email_input.clear()
 
-        # Hide optional fields
         self.content_area.setVisible(False)
         self.permission_select.setVisible(False)
         self.action_select.setVisible(False)
@@ -360,7 +347,6 @@ class FileRuleClient(QWidget):
         self.admin_email_input.setVisible(False)
         self.admin_password_input.setVisible(False)
 
-        # Disable buttons that require input
         self.write_button.setEnabled(False)
         self.change_permission_button.setEnabled(False)
         self.add_user_button.setEnabled(False)
