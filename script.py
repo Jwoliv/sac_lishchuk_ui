@@ -89,7 +89,7 @@ class FileRuleClient(QWidget):
         permission_management_layout.addWidget(self.role_permission_select)
 
         self.permission_select = QComboBox(self)
-        self.permission_select.addItems(["R", "W", "E"])
+        self.permission_select.addItems(["R", "W", "X"])
         self.permission_select.setVisible(False)
         permission_management_layout.addWidget(self.permission_select)
 
@@ -334,8 +334,8 @@ class FileRuleClient(QWidget):
 
     # Define the function to clear all inputs
     def clear_all_forms(self):
-        self.username_input.clear()
-        self.password_input.clear()
+        # self.username_input.clear()
+        # self.password_input.clear()
         self.file_name_input.clear()
         self.response_area.clear()
         self.content_area.clear()
