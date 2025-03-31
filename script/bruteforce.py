@@ -52,7 +52,7 @@ def process_passwords(user_email, charset, password_lengths, prefix="", suffix="
             if response.status_code == 200:
                 with print_lock:
                     print("#######################################################################")
-                    print(f"Password found: {password_str}", flush=True)
+                    print(f"Password for user [{user_email}] found [{password_str}]", flush=True)
                     print("#######################################################################")
                     with open(OUTPUT_FILE, "a") as f:
                         now = datetime.now()
