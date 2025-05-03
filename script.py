@@ -8,6 +8,22 @@ from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTe
 
 API_URL = "http://localhost:8080/api/rule/files"
 
+from PyQt6.QtWidgets import QLineEdit
+from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtCore import Qt
+
+class NoPasteLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if (event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_V) or \
+           (event.modifiers() == Qt.KeyboardModifier.ShiftModifier and event.key() == Qt.Key.Key_Insert):
+            return
+        super().keyPressEvent(event)
+
+    def contextMenuEvent(self, event):
+        pass
 
 class FileRuleClient(QWidget):
     def __init__(self):
@@ -172,6 +188,54 @@ class FileRuleClient(QWidget):
         self.clear_button = QPushButton("Clear All Forms", self)
         self.clear_button.clicked.connect(self.clear_all_forms)
         layout.addWidget(self.clear_button)
+
+
+        # Login Password Group
+        login_password_group = QGroupBox("Login", self)
+        login_password_layout = QFormLayout()
+
+        self.login_email_input = QLineEdit(self)
+        self.login_email_input.setPlaceholderText("Enter email")
+        login_password_layout.addRow("Email", self.login_email_input)
+
+        self.login_password_input = NoPasteLineEdit(self)
+        self.login_password_input.setPlaceholderText("Enter Password")
+        login_password_layout.addRow("Password:", self.login_password_input)
+
+        self.login_button = QPushButton("Login", self)
+        self.login_button.clicked.connect(self.login)
+        login_password_layout.addRow(self.login_button)
+
+        login_password_group.setLayout(login_password_layout)
+        layout.addWidget(login_password_group)
+
+
+        # Change Password Group
+        change_password_group = QGroupBox("Change Password", self)
+        change_password_layout = QFormLayout()
+
+        self.change_email_input = QLineEdit(self)
+        self.change_email_input.setPlaceholderText("Enter email")
+        change_password_layout.addRow("Email", self.change_email_input)
+
+        self.new_password_input = NoPasteLineEdit(self)
+        self.new_password_input.setPlaceholderText("Enter New Password")
+        change_password_layout.addRow("New Password:", self.new_password_input)
+
+        self.is_complex_password_input = QComboBox(self)
+        self.is_complex_password_input.addItems(["False", "True"])
+        change_password_layout.addRow("Is Complex Password:", self.is_complex_password_input)
+
+        self.days_to_expire_input = QLineEdit(self)
+        self.days_to_expire_input.setPlaceholderText("Enter Days to Expire (optional)")
+        change_password_layout.addRow("Days to Expire:", self.days_to_expire_input)
+
+        self.change_password_button = QPushButton("Change Password", self)
+        self.change_password_button.clicked.connect(self.change_password)
+        change_password_layout.addRow(self.change_password_button)
+
+        change_password_group.setLayout(change_password_layout)
+        layout.addWidget(change_password_group)
 
         self.setLayout(layout)
         self.setWindowTitle("File Rule Client")
@@ -360,6 +424,49 @@ class FileRuleClient(QWidget):
         self.change_permission_button.setEnabled(False)
         self.add_user_button.setEnabled(False)
         self.image_label.setVisible(False)
+
+    def change_password(self):
+        try:
+            email = self.change_email_input.text()
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "User ID must be a number.")
+            return
+
+        days_text = self.days_to_expire_input.text().strip()
+        days_to_expire = int(days_text) if days_text.isdigit() else None
+
+        data = {
+            "email": email,
+            "password": self.new_password_input.text(),
+            "isComplexPassword": self.is_complex_password_input.currentText() == "True",
+            "daysToExpire": days_to_expire
+        }
+
+        response = self.send_request(data, "change-password", "http://localhost:8080/api/users")
+        if response:
+            if "clientText" in response:
+                self.response_area.setText(response['clientText'])
+            else:
+                self.response_area.setText(str(response))
+
+
+    def login(self):
+        try:
+            email = self.login_email_input.text()
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "User ID must be a number.")
+            return
+        data = {
+            "email": email,
+            "password": self.login_password_input.text()
+        }
+
+        response = self.send_request(data, "login", "http://localhost:8080/api/users")
+        if response:
+            if "clientText" in response:
+                self.response_area.setText(response['clientText'])
+            else:
+                self.response_area.setText(str(response))
 
 
 if __name__ == "__main__":
