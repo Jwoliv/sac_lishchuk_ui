@@ -23,8 +23,11 @@ class FileRuleClient(QWidget):
         self.username_input.setPlaceholderText("Enter Username")
         self.password_input = QLineEdit(self)
         self.password_input.setPlaceholderText("Enter Password")
+        self.ip_address = QLineEdit(self)
+        self.ip_address.setPlaceholderText("Enter Password")
         user_credentials_layout.addRow("Username:", self.username_input)
         user_credentials_layout.addRow("Password:", self.password_input)
+        user_credentials_layout.addRow("ip address:", self.ip_address)
         user_credentials_group.setLayout(user_credentials_layout)
         layout.addWidget(user_credentials_group)
 
@@ -203,6 +206,7 @@ class FileRuleClient(QWidget):
     def read_file(self):
         data = {
             "fileName": self.file_name_input.text(),
+            "ipAddress": self.ip_address.text(),
             "userConfig": {
                 "email": self.username_input.text(),
                 "password": self.password_input.text()
@@ -254,6 +258,7 @@ class FileRuleClient(QWidget):
             "fileName": self.file_name_input.text(),
             "userConfig": {"email": self.username_input.text(), "password": self.password_input.text()},
             "newContent": self.content_area.toPlainText(),
+            "ipAddress": self.ip_address.text(),
             "action": "OVERWRITE"
         }
         response = self.send_request(data, "write")
@@ -265,6 +270,7 @@ class FileRuleClient(QWidget):
     def execute_file(self):
         data = {
             "fileName": self.file_name_input.text(),
+            "ipAddress": self.ip_address.text(),
             "userConfig": {"email": self.username_input.text(), "password": self.password_input.text()}
         }
         response_json = self.send_request(data, "execute")
@@ -318,7 +324,10 @@ class FileRuleClient(QWidget):
         }
         response = self.send_request(data, None, "http://localhost:8080/api/users")
         if response:
-            self.response_area.setText(str(response))
+            if "clientText" in response:
+                self.response_area.setText(response['clientText'])
+            else:
+                self.response_area.setText(str(response))
 
 
     def clear_all_forms(self):
