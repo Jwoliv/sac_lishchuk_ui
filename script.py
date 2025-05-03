@@ -5,6 +5,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLineEdit, QLabel, QMessageBox, \
     QComboBox, QGroupBox, QFormLayout, QHBoxLayout
 
+import face_recognition_script
 
 API_URL = "http://localhost:8080/api/rule/files"
 
@@ -471,6 +472,9 @@ class FileRuleClient(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    client = FileRuleClient()
-    client.show()
-    sys.exit(app.exec())
+    if face_recognition_script.main():
+        client = FileRuleClient()
+        client.show()
+        sys.exit(app.exec())
+    else:
+        print("Запуск не є дозволеним")
